@@ -10,7 +10,11 @@ import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.logging.Level;
@@ -25,26 +29,105 @@ import org.json.simple.JSONArray;
  */
 public class JSon {
     
+           //funciones para guardad los datos del JSON a la base de datos
+        
+    private static void guardarCaracteristicas(JSONObject jsonObject, Connection connection) throws SQLException {
+        JSONObject tienda = (JSONObject) jsonObject.get("tienda");
+        JSONArray productos = (JSONArray) tienda.get("productos");
+
+        String query = "INSERT INTO caracteristicas (nombre, producto_id) VALUES (?, ?)";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            for (Object prod : productos) {
+                JSONObject producto = (JSONObject) prod;
+                Long productoId = (Long) producto.get("id");
+
+                JSONArray caracteristicas = (JSONArray) producto.get("caracteristicas");
+                for (Object car : caracteristicas) {
+                    stmt.setString(1, (String) car);
+                    stmt.setLong(2, productoId);
+                    stmt.executeUpdate();
+                }
+            }
+        }
+    }
+
+        private static void guardarImagenes(JSONObject jsonObject, Connection connection) throws SQLException {
+        JSONObject tienda = (JSONObject) jsonObject.get("tienda");
+        JSONArray productos = (JSONArray) tienda.get("productos");
+
+        String query = "INSERT INTO imagen (url, producto_id) VALUES (?, ?)";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            for (Object prod : productos) {
+                JSONObject producto = (JSONObject) prod;
+                Long productoId = (Long) producto.get("id");
+
+                JSONArray imagenes = (JSONArray) producto.get("imagenes");
+                for (Object img : imagenes) {
+                    stmt.setString(1, (String) img);
+                    stmt.setLong(2, productoId);
+                    stmt.executeUpdate();
+                }
+            }
+        }
+     }
+
+    private static void guardarUsuarios(JSONObject jsonObject, Connection connection) throws SQLException {
+        JSONObject tienda = (JSONObject) jsonObject.get("tienda");
+        JSONArray usuarios = (JSONArray) tienda.get("usuarios");
+
+        String queryUsuario = "INSERT INTO usuario (nombre, email) VALUES (?, ?)";
+        String queryDireccion = "INSERT INTO direccion (calle, numero, ciudad, pais, usuario_id) VALUES (?, ?, ?, ?, ?)";
+
+        try (PreparedStatement stmtUsuario = connection.prepareStatement(queryUsuario, Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement stmtDireccion = connection.prepareStatement(queryDireccion)) {
+
+            for (Object user : usuarios) {
+                JSONObject usuario = (JSONObject) user;
+                stmtUsuario.setString(1, (String) usuario.get("nombre"));
+                stmtUsuario.setString(2, (String) usuario.get("email"));
+                stmtUsuario.executeUpdate();
+
+                // Obtener el ID generado
+                ResultSet rs = stmtUsuario.getGeneratedKeys();
+                if (rs.next()) {
+                    int usuarioId = rs.getInt(1);
+
+                    // Insertar la dirección
+                    JSONObject direccion = (JSONObject) usuario.get("direccion");
+                    stmtDireccion.setString(1, (String) direccion.get("calle"));
+                    stmtDireccion.setString(2, (String) direccion.get("numero"));
+                    stmtDireccion.setString(3, (String) direccion.get("ciudad"));
+                    stmtDireccion.setString(4, (String) direccion.get("pais"));
+                    stmtDireccion.setInt(5, usuarioId);
+                    stmtDireccion.executeUpdate();
+                }
+            }
+        }
+    }
+    
+    
+    
     public static void LeerJson() throws ParseException{
         JSONParser parser = new JSONParser();
         try (FileReader reader = new FileReader("src/main/resources/JSonTienda.json")){
             Object obj = parser.parse(reader);
 
-            /*
-            JSONObject OEw = (JSONObject) obj;
+            
+            JSONObject jsonObject = (JSONObject) obj;
 
-            System.out.println(OEw);
-            */
+            System.out.println(jsonObject);
+
             
             //este pedazo del cdigo llama a las funciones requetidas para guarar los datos del JSOn a la base de datos
             
-            Connection connection = conexionBBDD.conectar();
-            if (connection != null) {
+            ConexionBBDD connection = new ConexionBBDD();
+            Connection conn = connection.conectar();
+            if (conn != null) {
                 // Insertar datos en la base de datos
-                guardarCategorias(jsonObject, connection);
-                guardarProductos(jsonObject, connection);
-                guardarUsuarios(jsonObject, connection);
-                conexionBBDD.cerrarConexion(connection);
+                guardarCategorias(jsonObject, conn);
+                guardarProductos(jsonObject, conn);
+                guardarUsuarios(jsonObject, conn);
+                connection.cerrarConexion(conn);
             }
 
         }catch (FileNotFoundException e) {
@@ -172,82 +255,8 @@ public class JSon {
         }
         
         }
-        
-        //funciones para guardad los datos del JSON a la base de datos
-        
-    private static void guardarCaracteristicas(JSONObject jsonObject, Connection connection) throws SQLException {
-        JSONObject tienda = (JSONObject) jsonObject.get("tienda");
-        JSONArray productos = (JSONArray) tienda.get("productos");
-
-        String query = "INSERT INTO caracteristica (nombre, producto_id) VALUES (?, ?)";
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            for (Object prod : productos) {
-                JSONObject producto = (JSONObject) prod;
-                Long productoId = (Long) producto.get("id");
-
-                JSONArray caracteristicas = (JSONArray) producto.get("caracteristicas");
-                for (Object car : caracteristicas) {
-                    stmt.setString(1, (String) car);
-                    stmt.setLong(2, productoId);
-                    stmt.executeUpdate();
-                }
-            }
-        }
     }
-
-        private static void guardarImagenes(JSONObject jsonObject, Connection connection) throws SQLException {
-        JSONObject tienda = (JSONObject) jsonObject.get("tienda");
-        JSONArray productos = (JSONArray) tienda.get("productos");
-
-        String query = "INSERT INTO imagen (url, producto_id) VALUES (?, ?)";
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            for (Object prod : productos) {
-                JSONObject producto = (JSONObject) prod;
-                Long productoId = (Long) producto.get("id");
-
-                JSONArray imagenes = (JSONArray) producto.get("imagenes");
-                for (Object img : imagenes) {
-                    stmt.setString(1, (String) img);
-                    stmt.setLong(2, productoId);
-                    stmt.executeUpdate();
-                }
-            }
-        }
-     }
-
-    private static void guardarUsuarios(JSONObject jsonObject, Connection connection) throws SQLException {
-        JSONObject tienda = (JSONObject) jsonObject.get("tienda");
-        JSONArray usuarios = (JSONArray) tienda.get("usuarios");
-
-        String queryUsuario = "INSERT INTO usuario (nombre, email) VALUES (?, ?)";
-        String queryDireccion = "INSERT INTO direccion (calle, numero, ciudad, pais, usuario_id) VALUES (?, ?, ?, ?, ?)";
-
-        try (PreparedStatement stmtUsuario = connection.prepareStatement(queryUsuario, Statement.RETURN_GENERATED_KEYS);
-             PreparedStatement stmtDireccion = connection.prepareStatement(queryDireccion)) {
-
-            for (Object user : usuarios) {
-                JSONObject usuario = (JSONObject) user;
-                stmtUsuario.setString(1, (String) usuario.get("nombre"));
-                stmtUsuario.setString(2, (String) usuario.get("email"));
-                stmtUsuario.executeUpdate();
-
-                // Obtener el ID generado
-                ResultSet rs = stmtUsuario.getGeneratedKeys();
-                if (rs.next()) {
-                    int usuarioId = rs.getInt(1);
-
-                    // Insertar la dirección
-                    JSONObject direccion = (JSONObject) usuario.get("direccion");
-                    stmtDireccion.setString(1, (String) direccion.get("calle"));
-                    stmtDireccion.setString(2, (String) direccion.get("numero"));
-                    stmtDireccion.setString(3, (String) direccion.get("ciudad"));
-                    stmtDireccion.setString(4, (String) direccion.get("pais"));
-                    stmtDireccion.setInt(5, usuarioId);
-                    stmtDireccion.executeUpdate();
-                }
-            }
-        }
-    }
+ 
 
 
 //otras funiones
@@ -430,8 +439,5 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
                 // Manejar el error de restaurar el autocommit
             }
         }
-    }
-}
-    
     }
 }

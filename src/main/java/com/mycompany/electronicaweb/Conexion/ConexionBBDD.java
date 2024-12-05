@@ -49,64 +49,7 @@ public class ConexionBBDD {
 		} catch (SQLException e) {
 			System.err.println("Se ha producido un error al cerrar la conexion");
 			
-		}
-                
-          /*
-             
-            public void insertData() throws SQLException{
-		Connection conexion = conectar();
-		
-		try {
-			
-		//Datos a insertar
-			String consultasInserccion = "INSERT INTO fabricante VALUES(11, 'Martin');";
-			System.out.println(consultasInserccion);
-		//Creaci�n del Statement para poder reqalizar la consulta
-			Statement consul = conexion.createStatement();
-		//Ejecuci�n de la consulta
-			consul.executeUpdate(consultasInserccion);
-			System.out.println("Datos insertados correctamente");
-		//Cierre del Statement
-			consul.close();
-			}finally {
-				//Cierre de la conexi�n
-				cerrarConexion(conexion);
-			}
-	}
-	
-	public void getData() throws SQLException{
-		Connection conexion = conectar();
-
-		if(conexion!=null) {
-			try {
-
-				//Datos a consultar
-				String consultasSeleccion = "SELECT * FROM producto";
-				System.out.println(consultasSeleccion);
-				Statement consul = conexion.createStatement();
-				//Ejecuci�n de la consulta
-					if(consul.execute(consultasSeleccion)) {
-						ResultSet resultset = consul.getResultSet();
-						while(resultset.next()) {
-							Producto producto = new Producto (resultset.getInt("id"), resultset.getString("nombre"),
-									resultset.getInt("precio"), resultset.getInt("id_fabricante") );
-							System.out.println(producto.toString());
-							
-						}
-						
-						System.out.println("Datos recuperados correctamente");
-					}
-				//Cierre del Statement
-					consul.close();
-				
-			}finally {
-				//Cierre de la conexi�n
-				cerrarConexion(conexion);
-			}
-		}
-	}    
-                
-          */     
+		}   
            
 	}
 }
