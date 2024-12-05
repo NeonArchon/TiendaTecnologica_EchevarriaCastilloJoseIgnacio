@@ -434,6 +434,4 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
 }
     
     }
-}  
-
-    
+}
