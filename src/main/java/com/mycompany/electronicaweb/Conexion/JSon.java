@@ -10,7 +10,9 @@ import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.text.ParseException;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
@@ -250,7 +252,7 @@ public class JSon {
 
 //otras funiones
 
-    //funcion para buscar un usuarios a teavez de su id
+    //funcion para buscar un usuario a travez de su id
     public String mostrarDatosUsuario(Connection conexion, int usuarioId) {
         String consultaSQL = "SELECT email, calle, numero, ciudad, pais FROM direccion d JOIN usuario u ON d.usuario_id = u.id WHERE u.id = ?";
         StringBuilder resultado = new StringBuilder();
@@ -278,42 +280,50 @@ public class JSon {
     }
 
     //funcion para buscar un producto pro su categoria
-    public String buscarProductosPorCategoria(Connection conexion, String nombreCategoria) {
-        String consultaSQL = """
-            SELECT p.id, p.nombre, p.descripcion, p.inventario 
-            FROM producto p
-            JOIN categoria c ON p.categoria_id = c.id
-            WHERE c.nombre = ?
-        """;
-        StringBuilder resultado = new StringBuilder();
+public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCategoria, Integer idProducto) {
+    String consultaSQL = """
+        SELECT p.id, p.nombre, p.descripcion, p.inventario
+        FROM producto p
+        JOIN categoria c ON p.categoria_id = c.id
+        WHERE (c.nombre = ? AND idProducto IS NULL) OR idProducto = ?
+    """;
+    StringBuilder resultado = new StringBuilder();
 
-        try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL)) {
-            stmt.setString(1, nombreCategoria);
+    try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL)) {
+        stmt.setString(1, nombreCategoria);
+        if (idProducto != null) {
+            stmt.setInt(2, idProducto);
+        }
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    resultado.append("ID: ").append(rs.getInt("id")).append("\n");
-                    resultado.append("Nombre: ").append(rs.getString("nombre")).append("\n");
-                    resultado.append("Descripción: ").append(rs.getString("descripcion")).append("\n");
-                    resultado.append("Inventario: ").append(rs.getInt("inventario")).append("\n");
-                    resultado.append("-------------\n");
-                }
+        try (ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                int id = rs.getInt("id");
+                String nombre = rs.getString("nombre");
+                String descripcion = rs.getString("descripcion");
+                int inventario = rs.getInt("inventario");
+
+                resultado.append("ID: ").append(id).append("\n");
+                resultado.append("Nombre: ").append(nombre).append("\n");
+                resultado.append("Descripción: ").append(descripcion).append("\n");
+                resultado.append("Inventario: ").append(inventario).append("\n");
+                resultado.append("-------------\n");
+            } else if (idProducto != null) {
+                resultado.append("El producto " + idProducto + " no fue encontrado.");
+            } else {
+                resultado.append("No se encontraron productos para la categoría: " + nombreCategoria);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "Error al realizar la consulta.";
         }
-
-        if (resultado.length() == 0) {
-            return "No se encontraron productos para la categoría: " + nombreCategoria;
-        }
-
-        return resultado.toString();
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return "Error al realizar la consulta.";
     }
+
+    return resultado.toString();
+}
      
     
     //funcion para mostrar el historial de todas las compras realizadas
-    public String mostrarHistorialCompleto(Connection conexion) {
+    public String MostrarHistorialCompleto(Connection conexion) {
     String consultaSQL = "SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha " +
                          "FROM historial_compras hc " +
                          "JOIN usuario u ON hc.usuario_id = u.id " +
@@ -344,7 +354,7 @@ public class JSon {
 }
 
     //funcion para realizar un historial de compras de la fecha establecidas
-    public String mostrarHistorialPorFecha(Connection conexion, String fecha) {
+    public String MostrarHistorialPorFecha(Connection conexion, String fecha) {
         String consultaSQL = "SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha " +
                              "FROM historial_compras hc " +
                              "JOIN usuario u ON hc.usuario_id = u.id " +
@@ -377,7 +387,51 @@ public class JSon {
         return resultado.toString();
     }
     
-    
+    //funcion para hacer una compra
+     public static boolean RealizarCompra(Connection conexion, int idProducto, int idUsuario, int cantidad) {
+        try {
+            // Transacción para asegurar la consistencia de los datos
+            conexion.setAutoCommit(false);
+
+            // 1. Actualizar inventario del producto
+            String actualizarInventario = "UPDATE producto SET inventario = inventario - ? WHERE id = ?";
+            try (PreparedStatement stmt = conexion.prepareStatement(actualizarInventario)) {
+                stmt.setInt(1, cantidad);
+                stmt.setInt(2, idProducto);
+                stmt.executeUpdate();
+            }
+
+            // 2. Insertar registro en el historial de compras
+            String insertarCompra = "INSERT INTO historial_compras (producto_id, usuario_id, cantidad, fecha_compra) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement stmt = conexion.prepareStatement(insertarCompra)) {
+                stmt.setInt(1, idProducto);
+                stmt.setInt(2, idUsuario);
+                stmt.setInt(3, cantidad);
+                stmt.setTimestamp(4, new java.sql.Timestamp(new Date().getTime()));
+                stmt.executeUpdate();
+            }
+
+            // Confirmar la transacción
+            conexion.commit();
+            return true;
+        } catch (SQLException e) {
+            try {
+                // Revertir la transacción en caso de error
+                conexion.rollback();
+            } catch (SQLException ex) {
+                //Error de rollback
+            }
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                conexion.setAutoCommit(true);
+            } catch (SQLException e) {
+                // Manejar el error de restaurar el autocommit
+            }
+        }
+    }
+}
     
     }
 }  
