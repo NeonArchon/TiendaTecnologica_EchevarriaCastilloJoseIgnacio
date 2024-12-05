@@ -20,14 +20,12 @@ public class Electronicaweb {
         
 
         
-        /*
         
        JSon json = new JSon();
        JSon.LeerJson();
 
        System.out.print(json);
         
-        */
         
         ConexionBBDD conexionBBDD = new ConexionBBDD();
         Connection conexion = conexionBBDD.conectar();
