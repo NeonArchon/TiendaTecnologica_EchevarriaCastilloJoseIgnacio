@@ -47,3 +47,13 @@ CREATE TABLE direccion (
     usuario_id INT,
     FOREIGN KEY (usuario_id) REFERENCES usuario(id)
 );
+
+CREATE TABLE historial_compras (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    usuario_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    cantidad INT NOT NULL,
+    fecha_compra DATE NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id),
+    FOREIGN KEY (producto_id) REFERENCES producto(id)
+);

@@ -288,54 +288,53 @@ public class JSon {
         }
     }
  
+//otras funiones
+//funcion para buscar un usuario a travez de su id
+public static String mostrarDatosUsuario(Connection conexion, int usuarioId) {
+    String consultaSQL = "SELECT u.email, d.calle, d.numero, d.ciudad, d.pais FROM usuario u " +
+                         "JOIN direccion d ON u.id = d.usuario_id WHERE u.id = ?";
+    StringBuilder resultado = new StringBuilder();
 
+    try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL)) {
+        stmt.setInt(1, usuarioId);
 
-    //otras funiones
-    //funcion para buscar un usuario a travez de su id
-    public static String mostrarDatosUsuario(Connection conexion, int usuarioId) {
-        String consultaSQL = "SELECT email, calle, numero, ciudad, pais FROM direccion d JOIN usuario u ON d.usuario_id = u.id WHERE u.id = ?";
-        StringBuilder resultado = new StringBuilder();
-
-        try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL)) {
-            stmt.setInt(1, usuarioId);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    resultado.append("Email: ").append(rs.getString("email")).append("\n");
-                    resultado.append("Calle: ").append(rs.getString("calle")).append("\n");
-                    resultado.append("Número: ").append(rs.getString("numero")).append("\n");
-                    resultado.append("Ciudad: ").append(rs.getString("ciudad")).append("\n");
-                    resultado.append("País: ").append(rs.getString("pais")).append("\n");
-                } else {
-                    return "El usuario " + usuarioId + " no fue encontrado.";
-                }
+        try (ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                resultado.append("Email: ").append(rs.getString("email")).append("\n");
+                resultado.append("Calle: ").append(rs.getString("calle")).append("\n");
+                resultado.append("Número: ").append(rs.getString("numero")).append("\n");
+                resultado.append("Ciudad: ").append(rs.getString("ciudad")).append("\n");
+                resultado.append("País: ").append(rs.getString("pais")).append("\n");
+            } else {
+                return "El usuario " + usuarioId + " no fue encontrado.";
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "Error en la consulta.";
         }
-
-        return resultado.toString();
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return "Error en la consulta.";
     }
 
-    //funcion para buscar un producto pro su categoria
-public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCategoria, Integer idProducto) {
+    return resultado.toString();
+}
+
+//funcion para buscar un producto por su categoria o id
+public String BuscarProductoPorCategoriaId(Connection conexion, String nombreCategoria, Integer idProducto) {
     String consultaSQL = """
         SELECT p.id, p.nombre, p.descripcion, p.inventario
         FROM producto p
-        JOIN categoria c ON p.categoria_id = c.id
-        WHERE (c.nombre = ? AND idProducto IS NULL) OR idProducto = ?
+        JOIN categoria c ON c.id = p.id
+        WHERE (? IS NULL OR c.nombre = ?) AND (? IS NULL OR p.id = ?);
     """;
     StringBuilder resultado = new StringBuilder();
 
     try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL)) {
         stmt.setString(1, nombreCategoria);
-        if (idProducto != null) {
-            stmt.setInt(2, idProducto);
-        }
+        stmt.setString(2, nombreCategoria);
+        stmt.setObject(3, idProducto, java.sql.Types.INTEGER);
+        stmt.setObject(4, idProducto, java.sql.Types.INTEGER);
 
         try (ResultSet rs = stmt.executeQuery()) {
-            if (rs.next()) {
+            while (rs.next()) {
                 int id = rs.getInt("id");
                 String nombre = rs.getString("nombre");
                 String descripcion = rs.getString("descripcion");
@@ -346,10 +345,6 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
                 resultado.append("Descripción: ").append(descripcion).append("\n");
                 resultado.append("Inventario: ").append(inventario).append("\n");
                 resultado.append("-------------\n");
-            } else if (idProducto != null) {
-                resultado.append("El producto " + idProducto + " no fue encontrado.");
-            } else {
-                resultado.append("No se encontraron productos para la categoría: " + nombreCategoria);
             }
         }
     } catch (SQLException e) {
@@ -357,16 +352,21 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
         return "Error al realizar la consulta.";
     }
 
+    if (resultado.length() == 0) {
+        return "No se encontraron productos para la categoría o ID especificado.";
+    }
+
     return resultado.toString();
 }
-     
-    
-    //funcion para mostrar el historial de todas las compras realizadas
-    public static String MostrarHistorialCompleto(Connection conexion) {
-    String consultaSQL = "SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha " +
-                         "FROM historial_compras hc " +
-                         "JOIN usuario u ON hc.usuario_id = u.id " +
-                         "JOIN producto p ON hc.producto_id = p.id";
+
+//funcion para mostrar el historial de todas las compras realizadas
+public static String MostrarHistorialCompleto(Connection conexion) {
+    String consultaSQL = """
+        SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha_compra
+        FROM historial_compras hc
+        JOIN usuario u ON hc.usuario_id = u.id
+        JOIN producto p ON hc.producto_id = p.id;
+    """;
     StringBuilder resultado = new StringBuilder();
 
     try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL);
@@ -377,7 +377,7 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
             resultado.append("Cliente: ").append(rs.getString("cliente")).append("\n");
             resultado.append("Producto: ").append(rs.getString("producto")).append("\n");
             resultado.append("Cantidad: ").append(rs.getInt("cantidad")).append("\n");
-            resultado.append("Fecha: ").append(rs.getDate("fecha")).append("\n");
+            resultado.append("Fecha: ").append(rs.getDate("fecha_compra")).append("\n");
             resultado.append("-------------\n");
         }
     } catch (SQLException e) {
@@ -392,82 +392,99 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
     return resultado.toString();
 }
 
-    //funcion para realizar un historial de compras de la fecha establecidas
-    public static String MostrarHistorialPorFecha(Connection conexion, String fecha) {
-        String consultaSQL = "SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha " +
-                             "FROM historial_compras hc " +
-                             "JOIN usuario u ON hc.usuario_id = u.id " +
-                             "JOIN producto p ON hc.producto_id = p.id " +
-                             "WHERE hc.fecha = ?";
-        StringBuilder resultado = new StringBuilder();
+//funcion para realizar un historial de compras de la fecha establecida
+public static String MostrarHistorialPorFecha(Connection conexion, String fecha) {
+    String consultaSQL = """
+        SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha_compra
+        FROM historial_compras hc
+        JOIN usuario u ON hc.usuario_id = u.id
+        JOIN producto p ON hc.producto_id = p.id
+        WHERE hc.fecha_compra = ?;
+    """;
+    StringBuilder resultado = new StringBuilder();
 
-        try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL)) {
-            stmt.setString(1, fecha);
+    try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL)) {
+        stmt.setString(1, fecha);
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    resultado.append("ID Compra: ").append(rs.getInt("id_compra")).append("\n");
-                    resultado.append("Cliente: ").append(rs.getString("cliente")).append("\n");
-                    resultado.append("Producto: ").append(rs.getString("producto")).append("\n");
-                    resultado.append("Cantidad: ").append(rs.getInt("cantidad")).append("\n");
-                    resultado.append("Fecha: ").append(rs.getDate("fecha")).append("\n");
-                    resultado.append("-------------\n");
-                }
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                resultado.append("ID Compra: ").append(rs.getInt("id_compra")).append("\n");
+                resultado.append("Cliente: ").append(rs.getString("cliente")).append("\n");
+                resultado.append("Producto: ").append(rs.getString("producto")).append("\n");
+                resultado.append("Cantidad: ").append(rs.getInt("cantidad")).append("\n");
+                resultado.append("Fecha: ").append(rs.getDate("fecha_compra")).append("\n");
+                resultado.append("-------------\n");
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "Error al consultar el historial por fecha.";
         }
-
-        if (resultado.length() == 0) {
-            return "No se encontraron compras para la fecha: " + fecha;
-        }
-
-        return resultado.toString();
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return "Error al consultar el historial por fecha.";
     }
-    
-    //funcion para hacer una compra
-     public static boolean RealizarCompra(Connection conexion, int idProducto, int idUsuario, int cantidad) {
-        try {
-            // Transacción para asegurar la consistencia de los datos
-            conexion.setAutoCommit(false);
 
-            // 1. Actualizar inventario del producto
-            String actualizarInventario = "UPDATE producto SET inventario = inventario - ? WHERE id = ?";
-            try (PreparedStatement stmt = conexion.prepareStatement(actualizarInventario)) {
-                stmt.setInt(1, cantidad);
-                stmt.setInt(2, idProducto);
-                stmt.executeUpdate();
-            }
+    if (resultado.length() == 0) {
+        return "No se encontraron compras para la fecha: " + fecha;
+    }
 
-            // 2. Insertar registro en el historial de compras
-            String insertarCompra = "INSERT INTO historial_compras (producto_id, usuario_id, cantidad, fecha_compra) VALUES (?, ?, ?, ?)";
-            try (PreparedStatement stmt = conexion.prepareStatement(insertarCompra)) {
-                stmt.setInt(1, idProducto);
-                stmt.setInt(2, idUsuario);
-                stmt.setInt(3, cantidad);
-                stmt.setTimestamp(4, new java.sql.Timestamp(new Date().getTime()));
-                stmt.executeUpdate();
-            }
+    return resultado.toString();
+}
 
-            // Confirmar la transacción
-            conexion.commit();
-            return true;
-        } catch (SQLException e) {
-            try {
-                // Revertir la transacción en caso de error
-                conexion.rollback();
-            } catch (SQLException ex) {
-                //Error de rollback
-            }
-            e.printStackTrace();
-            return false;
-        } finally {
-            try {
-                conexion.setAutoCommit(true);
-            } catch (SQLException e) {
-                // Manejar el error de restaurar el autocommit
-            }
+//funcion para hacer una compra
+public static boolean RealizarCompra(Connection conexion, int idProducto, int idUsuario, int cantidad) {
+    try {
+        // Transacción para asegurar la consistencia de los datos
+        conexion.setAutoCommit(false);
+
+        // 1. Actualizar inventario del producto
+        String actualizarInventario = "UPDATE producto SET inventario = inventario - ? WHERE id = ?";
+        try (PreparedStatement stmt = conexion.prepareStatement(actualizarInventario)) {
+            stmt.setInt(1, cantidad);
+            stmt.setInt(2, idProducto);
+            stmt.executeUpdate();
         }
+
+        // 2. Insertar registro en el historial de compras
+        String insertarCompra = "INSERT INTO historial_compras (producto_id, usuario_id, cantidad, fecha_compra) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement stmt = conexion.prepareStatement(insertarCompra)) {
+            stmt.setInt(1, idProducto);
+            stmt.setInt(2, idUsuario);
+            stmt.setInt(3, cantidad);
+            stmt.setTimestamp(4, new java.sql.Timestamp(new java.util.Date().getTime()));
+            stmt.executeUpdate();
+        }
+
+        // Confirmar la transacción
+        conexion.commit();
+        return true;
+    } catch (SQLException e) {
+        try {
+            // Revertir la transacción en caso de error
+            conexion.rollback();
+        } catch (SQLException ex) {
+            //Error de rollback
+        }
+        e.printStackTrace();
+        return false;
+    } finally {
+        try {
+            conexion.setAutoCommit(true);
+        } catch (SQLException e) {
+            // Manejar el error de restaurar el autocommit
+        }
+    }
+}
+
+//funcion para mostrar catalogo
+public static void MostrarCatalogo(Connection conexion) throws SQLException {
+    String consultaSQL = """
+        SELECT p.id, p.nombre, p.descripcion, i.url
+        FROM producto p
+        LEFT JOIN imagen i ON p.id = i.producto_id
+        ORDER BY p.id;
+    """;
+
+    try (PreparedStatement stmt = conexion.prepareStatement(consultaSQL);
+         ResultSet rs = stmt.executeQuery()) {
+}
+    
     }
 }
