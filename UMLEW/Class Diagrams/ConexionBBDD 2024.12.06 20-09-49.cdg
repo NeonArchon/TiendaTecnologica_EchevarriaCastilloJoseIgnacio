@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ClassDiagram name="ConexionBBDD">
+  <ClassDiagramComponents>
+    <Class name="ConexionBBDD" package="com.mycompany.electronicaweb.Conexion" visibility="public" xPosition="920.0" yPosition="20.0">
+      <Fields>
+        <Field name="DRIVER" type="String" visibility="private" isStatic="true" isFinal="true"/>
+        <Field name="URL" type="String" visibility="private" isStatic="true" isFinal="true"/>
+        <Field name="USUARIO" type="String" visibility="private" isStatic="true" isFinal="true"/>
+        <Field name="PASSWORD" type="String" visibility="private" isStatic="true" isFinal="true"/>
+      </Fields>
+      <Constructors/>
+      <Methods>
+        <Method name="conectar" returnType="Connection" visibility="public"/>
+        <Method name="cerrarConexion" returnType="void" visibility="public">
+          <Argument type="Connection" name="conection"/>
+        </Method>
+      </Methods>
+    </Class>
+  </ClassDiagramComponents>
+  <ClassDiagramRelations/>
+</ClassDiagram>
