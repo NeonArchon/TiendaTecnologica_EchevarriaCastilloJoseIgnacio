@@ -6,7 +6,6 @@ package com.mycompany.electronicaweb.Conexion;
 
 
 import org.json.simple.parser.JSONParser;
-import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -17,8 +16,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.ParseException;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONArray;
 
@@ -29,9 +26,9 @@ import org.json.simple.JSONArray;
  */
 public class JSon {
     
-           //funciones para guardad los datos del JSON a la base de datos
+    //funciones para guardar los datos del JSON a la base de datos
         
-    private static void guardarCaracteristicas(JSONObject jsonObject, Connection connection) throws SQLException {
+    public static void guardarCaracteristicas(JSONObject jsonObject, Connection connection) throws SQLException {
         JSONObject tienda = (JSONObject) jsonObject.get("tienda");
         JSONArray productos = (JSONArray) tienda.get("productos");
 
@@ -51,27 +48,27 @@ public class JSon {
         }
     }
 
-        private static void guardarImagenes(JSONObject jsonObject, Connection connection) throws SQLException {
-        JSONObject tienda = (JSONObject) jsonObject.get("tienda");
-        JSONArray productos = (JSONArray) tienda.get("productos");
+    public static void guardarImagenes(JSONObject jsonObject, Connection connection) throws SQLException {
+    JSONObject tienda = (JSONObject) jsonObject.get("tienda");
+    JSONArray productos = (JSONArray) tienda.get("productos");
 
-        String query = "INSERT INTO imagen (url, producto_id) VALUES (?, ?)";
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            for (Object prod : productos) {
-                JSONObject producto = (JSONObject) prod;
-                Long productoId = (Long) producto.get("id");
+    String query = "INSERT INTO imagen (url, producto_id) VALUES (?, ?)";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+        for (Object prod : productos) {
+            JSONObject producto = (JSONObject) prod;
+            Long productoId = (Long) producto.get("id");
 
-                JSONArray imagenes = (JSONArray) producto.get("imagenes");
-                for (Object img : imagenes) {
-                    stmt.setString(1, (String) img);
-                    stmt.setLong(2, productoId);
-                    stmt.executeUpdate();
+            JSONArray imagenes = (JSONArray) producto.get("imagenes");
+            for (Object img : imagenes) {
+                stmt.setString(1, (String) img);
+                stmt.setLong(2, productoId);
+                stmt.executeUpdate();
                 }
             }
         }
      }
 
-    private static void guardarUsuarios(JSONObject jsonObject, Connection connection) throws SQLException {
+    public static void guardarUsuarios(JSONObject jsonObject, Connection connection) throws SQLException {
         JSONObject tienda = (JSONObject) jsonObject.get("tienda");
         JSONArray usuarios = (JSONArray) tienda.get("usuarios");
 
@@ -106,8 +103,42 @@ public class JSon {
     }
     
     
+    public static void guardarCategorias(JSONObject jsonObject, Connection connection) throws SQLException {
+    JSONObject tienda = (JSONObject) jsonObject.get("tienda");
+    JSONArray categorias = (JSONArray) tienda.get("categorias");
+
+    String query = "INSERT INTO categoria (nombre) VALUES (?)";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+        for (Object objCategoria : categorias) {
+            JSONObject categoria = (JSONObject) objCategoria;
+            stmt.setString(1, (String) categoria.get("nombre"));
+            stmt.executeUpdate();
+            }
+        }
+    }
     
-    public static void LeerJson() throws ParseException{
+    public static void guardarProductos(JSONObject jsonObject, Connection connection) throws SQLException {
+    JSONObject tienda = (JSONObject) jsonObject.get("tienda");
+    JSONArray productos = (JSONArray) tienda.get("productos");
+
+    String query = "INSERT INTO producto (nombre, descripcion, inventario, categoria_id) VALUES (?, ?, ?, ?)";
+    try (PreparedStatement stmt = connection.prepareStatement(query)) {
+        for (Object objProducto : productos) {
+            JSONObject producto = (JSONObject) objProducto;
+
+            stmt.setString(1, (String) producto.get("nombre"));
+            stmt.setString(2, (String) producto.get("descripcion"));
+            stmt.setInt(3, ((Long) producto.get("inventario")).intValue());
+            stmt.setInt(4, ((Long) producto.get("categoria_id")).intValue());
+
+            stmt.executeUpdate();
+        }
+    }
+}
+    
+    
+    
+    public static void LeerJson() throws ParseException, SQLException{
         JSONParser parser = new JSONParser();
         try (FileReader reader = new FileReader("src/main/resources/JSonTienda.json")){
             Object obj = parser.parse(reader);
@@ -259,10 +290,9 @@ public class JSon {
  
 
 
-//otras funiones
-
+    //otras funiones
     //funcion para buscar un usuario a travez de su id
-    public String mostrarDatosUsuario(Connection conexion, int usuarioId) {
+    public static String mostrarDatosUsuario(Connection conexion, int usuarioId) {
         String consultaSQL = "SELECT email, calle, numero, ciudad, pais FROM direccion d JOIN usuario u ON d.usuario_id = u.id WHERE u.id = ?";
         StringBuilder resultado = new StringBuilder();
 
@@ -332,7 +362,7 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
      
     
     //funcion para mostrar el historial de todas las compras realizadas
-    public String MostrarHistorialCompleto(Connection conexion) {
+    public static String MostrarHistorialCompleto(Connection conexion) {
     String consultaSQL = "SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha " +
                          "FROM historial_compras hc " +
                          "JOIN usuario u ON hc.usuario_id = u.id " +
@@ -363,7 +393,7 @@ public String BuscarProductoPorCategoriaOId(Connection conexion, String nombreCa
 }
 
     //funcion para realizar un historial de compras de la fecha establecidas
-    public String MostrarHistorialPorFecha(Connection conexion, String fecha) {
+    public static String MostrarHistorialPorFecha(Connection conexion, String fecha) {
         String consultaSQL = "SELECT hc.id AS id_compra, u.nombre AS cliente, p.nombre AS producto, hc.cantidad, hc.fecha " +
                              "FROM historial_compras hc " +
                              "JOIN usuario u ON hc.usuario_id = u.id " +

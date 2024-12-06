@@ -6,6 +6,7 @@ package com.mycompany.electronicaweb;
 
 import com.mycompany.electronicaweb.Conexion.ConexionBBDD;
 import com.mycompany.electronicaweb.Conexion.JSon;
+import static com.mycompany.electronicaweb.Conexion.JSon.RealizarCompra;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -210,24 +211,7 @@ public class EWframe extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jTituloActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTituloActionPerformed
-         String entrada = jTEntrada.getText(); // Leer el texto ingresado en el campo de entrada
-    if (entrada.isEmpty()) {
-        jTextArea1.setText("Por favor, ingrese un ID de usuario.");
-        return;
-    }
-
-    try {
-        int usuarioId = Integer.parseInt(entrada); // Convertir la entrada a un número
-        Connection conexion = new ConexionBBDD().conectar(); // Crear conexión a la base de datos
-        String resultado = JSon.mostrarDatosUsuario(conexion, usuarioId); // Llamar la función de búsqueda
-        jTextArea1.setText(resultado); // Mostrar el resultado en el área de texto
-        conexion.close();
-    } catch (NumberFormatException e) {
-        jTextArea1.setText("El ID debe ser un número.");
-    } catch (SQLException e) {
-        jTextArea1.setText("Error al conectar con la base de datos o realizar la consulta.");
-        e.printStackTrace();
-    }
+  
     }//GEN-LAST:event_jTituloActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
@@ -235,15 +219,78 @@ public class EWframe extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        // TODO add your handling code here:
+     String entrada = jTEntrada.getText(); // Leer el texto ingresado en el campo de entrada
+        String resultado;
+
+  try (Connection conexion = new ConexionBBDD().conectar()) { // Crear conexión a la base de datos
+        if (entrada.isEmpty()) {
+            // Si no se ingresa fecha, mostrar historial completo
+            resultado = JSon.MostrarHistorialCompleto(conexion); // Cambiar según la ubicación de la función
+        } else {
+            // Si se ingresa una fecha, mostrar historial por fecha
+            resultado = JSon.MostrarHistorialPorFecha(conexion, entrada); // Cambiar según la ubicación de la función
+        }
+
+        jTextArea1.setText(resultado); // Mostrar el resultado en el área de texto
+    } catch (SQLException e) {
+        jTextArea1.setText("Error al conectar con la base de datos o realizar la consulta.");
+        e.printStackTrace();
+    }
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        // TODO add your handling code here:
+          String entrada = jTEntrada.getText(); // Leer el texto ingresado en el campo de entrada
+    String[] datos = entrada.split(","); // Esperar entrada en formato: idProducto,idUsuario,cantidad
+
+    if (datos.length != 3) {
+        jTextArea1.setText("Por favor, ingrese la id del producto, su id y la cantidad que desee comprar, en ese orden");
+        return;
+    }
+
+    try {
+        int idProducto = Integer.parseInt(datos[0].trim());
+        int idUsuario = Integer.parseInt(datos[1].trim());
+        int cantidad = Integer.parseInt(datos[2].trim());
+
+        try (Connection conexion = new ConexionBBDD().conectar()) {
+            boolean exito = RealizarCompra(conexion, idProducto, idUsuario, cantidad);
+
+            if (exito) {
+                jTextArea1.setText("Compra realizada exitosamente.\n" +
+                                  "ID Producto: " + idProducto + "\n" +
+                                  "ID Usuario: " + idUsuario + "\n" +
+                                  "Cantidad: " + cantidad);
+            } else {
+                jTextArea1.setText("Error al realizar la compra. Verifique los datos.");
+            }
+        } catch (SQLException e) {
+            jTextArea1.setText("Error al conectar con la base de datos o realizar la operación.");
+            e.printStackTrace();
+        }
+    } catch (NumberFormatException e) {
+        jTextArea1.setText("Por favor, ingrese valores numéricos válidos para idProducto, idUsuario y cantidad.");
+    }
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        // TODO add your handling code here:
+           String entrada = jTEntrada.getText(); // Leer el texto ingresado en el campo de entrada
+    if (entrada.isEmpty()) {
+        jTextArea1.setText("Por favor, ingrese un ID de usuario.");
+        return;
+    }
+
+    try {
+        int usuarioId = Integer.parseInt(entrada); // Convertir la entrada a un número
+             try (Connection conexion = new ConexionBBDD().conectar() // Crear conexión a la base de datos
+             ) {
+                 String resultado = JSon.mostrarDatosUsuario(conexion, usuarioId); // Llamar la función de búsqueda
+                 jTextArea1.setText(resultado); // Mostrar el resultado en el área de texto
+             } // Llamar la función de búsqueda
+    } catch (NumberFormatException e) {
+        jTextArea1.setText("El ID debe ser un número.");
+    } catch (SQLException e) {
+        jTextArea1.setText("Error al conectar con la base de datos o realizar la consulta.");
+    }
     }//GEN-LAST:event_jButton3ActionPerformed
 
     /**

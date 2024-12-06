@@ -7,6 +7,7 @@ package com.mycompany.electronicaweb;
 import com.mycompany.electronicaweb.Conexion.ConexionBBDD;
 import com.mycompany.electronicaweb.Conexion.JSon;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.text.ParseException;
 
 /**
@@ -15,7 +16,7 @@ import java.text.ParseException;
  */
 public class Electronicaweb {
 
-    public static void main(String[] args) throws ParseException {
+    public static void main(String[] args) throws ParseException, SQLException {
         System.out.println("Hello World!");
         
 
